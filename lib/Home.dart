@@ -14,6 +14,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
 
   List _listaTarefas = [];                                              //lista onde as tarefas serão salvas
+  Map<String, dynamic> _tarefaRecuperada = Map();
   TextEditingController _controllerTarefa = TextEditingController();    // controller para salvar o que foi digitado dentro do showDialog
 
   Future<File> _getFile() async {
@@ -97,12 +98,66 @@ class _HomeState extends State<Home> {
     );
   }
 
+  _confirmarExclusao(context, index) {
+    showDialog(
+        context: context,
+        builder: (context){
+
+          return AlertDialog(
+            title: Text("Tem certeza que deseja remover tarefa?"),
+            actions: [
+              FlatButton(
+                  onPressed: (){
+                    _listaTarefas.removeAt(index);
+                    _salvarArquivo();
+                    Navigator.pop(context);
+                  },
+                  child: Text("Sim")
+              ),
+
+              FlatButton(
+                  onPressed: (){
+                    setState(() {
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Text("Não")
+              ),
+            ],
+
+          );
+        }
+    );
+
+  }
+
+
+  _snackbarDesfazer(context, index){
+
+    final snackbar = SnackBar(
+      duration: Duration(seconds: 4),
+      content: Text("Tarefa removida"),
+      action: SnackBarAction(
+          label: "Desfazer",
+          onPressed: (){
+            setState(() {
+              _listaTarefas.insert(index, _tarefaRecuperada);
+            });
+            _salvarArquivo();
+          }
+      ),
+    );
+    Scaffold.of(context).showSnackBar(snackbar);
+
+  }
+
   Widget criarItemLista(context, index){
 
-    final item = _listaTarefas[index]["titulo"];
+    final itemKey = DateTime.now().millisecondsSinceEpoch.toString();
 
     return Dismissible(
-      direction: DismissDirection.endToStart,
+        key: Key(itemKey),
+        direction: DismissDirection.endToStart,
         background: Container(
           color: Colors.red,
           padding: EdgeInsets.all(16),
@@ -116,11 +171,6 @@ class _HomeState extends State<Home> {
             ],
           ),
         ),
-        onDismissed: (direction){
-          _listaTarefas.removeAt(index);
-          _salvarArquivo();
-        },
-        key: Key(item),
         child: CheckboxListTile(
           title: Text(_listaTarefas[index]['titulo']),
           value: _listaTarefas[index]['realizada'],
@@ -133,7 +183,16 @@ class _HomeState extends State<Home> {
             _salvarArquivo();
 
           },
-        ));
+        ),
+        onDismissed: (direction){
+          //recupera e guarda item antes de remover da lista
+          _tarefaRecuperada = _listaTarefas[index];
+
+          //verifica intensão de remover item
+          _confirmarExclusao(context, index);
+
+        }
+    );
 
   }
 
