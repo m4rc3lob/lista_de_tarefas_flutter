@@ -20,7 +20,19 @@ class _HomeState extends State<Home> {
 
     //Capturando local do diretorio e criando arquivo dados.json no local
     final diretorio = await getApplicationDocumentsDirectory();
-    return File( "${diretorio.path}/dados.json");
+    return File(diretorio.path + "/dadosLista.json");
+  }
+
+  _salvarArquivo() async {
+
+    //recuperando arquivo File
+    var arquivo = await _getFile();
+
+    final diretorio = await getApplicationDocumentsDirectory();
+
+    //Convertendo a lista em json e salvando dentro do arquivo criado
+    String dados = json.encode(_listaTarefas);
+    arquivo.writeAsString(dados);
   }
 
   _salvarTarefa() {
@@ -40,16 +52,6 @@ class _HomeState extends State<Home> {
     _controllerTarefa.text = "";
   }
 
-  _salvarArquivo() async {
-
-    //recuperando arquivo File
-    var arquivo = await _getFile();
-
-    //Convertendo a lista em json e salvando dentro do arquivo criado
-    String dados = json.encode(_listaTarefas);
-    arquivo.writeAsString(dados);
-  }
-
   _lerArquivo() async {
 
     try{
@@ -62,7 +64,78 @@ class _HomeState extends State<Home> {
     }
   }
 
+  _criarItem() {
+    showDialog(
+        context: context,
+        builder: (context){
 
+          return AlertDialog(
+            title: Text("Adicionar tarefa"),
+            content: TextField(
+              controller: _controllerTarefa,
+              decoration: InputDecoration(
+                  labelText: "Digite sua tarefa"
+              ),
+              onChanged: (text){},
+            ),
+            actions: [
+              FlatButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancelar")
+              ),
+              FlatButton(
+                  onPressed: (){
+                    _salvarTarefa();
+                    Navigator.pop(context);
+                  },
+                  child: Text("Salvar")
+              ),
+            ],
+
+          );
+        }
+    );
+  }
+
+  Widget criarItemLista(context, index){
+
+    final item = _listaTarefas[index]["titulo"];
+
+    return Dismissible(
+      direction: DismissDirection.endToStart,
+        background: Container(
+          color: Colors.red,
+          padding: EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Icon(
+                  Icons.delete,
+                color: Colors.white,
+              )
+            ],
+          ),
+        ),
+        onDismissed: (direction){
+          _listaTarefas.removeAt(index);
+          _salvarArquivo();
+        },
+        key: Key(item),
+        child: CheckboxListTile(
+          title: Text(_listaTarefas[index]['titulo']),
+          value: _listaTarefas[index]['realizada'],
+          onChanged: (valorAlterado){
+
+            setState(() {
+              _listaTarefas[index]['realizada'] = valorAlterado;
+            });
+
+            _salvarArquivo();
+
+          },
+        ));
+
+  }
 
   @override
   void initState() {
@@ -88,64 +161,19 @@ class _HomeState extends State<Home> {
 
       ),
       body: Column(
-        children: [
+        children: <Widget>[
           Expanded(
               child: ListView.builder(
                   itemCount: _listaTarefas.length,
-                  itemBuilder: (context, index){
-
-                    return CheckboxListTile(
-                      title: Text(_listaTarefas[index]['titulo']),
-                      value: _listaTarefas[index]['realizada'],
-                      onChanged: (valorAlterado){
-
-                        setState(() {
-                          _listaTarefas[index]['realizada'] = valorAlterado;
-                        });
-
-                        _salvarArquivo();
-
-                      },
-                    );
-                  })
-          )
+                  itemBuilder: criarItemLista,
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor:  Colors.purple,
         child: Icon(Icons.add),
-        onPressed: (){
-
-          showDialog(
-              context: context,
-            builder: (context){
-                return AlertDialog(
-                  title: Text("Adicionar tarefa"),
-                  content: TextField(
-                    controller: _controllerTarefa,
-                    decoration: InputDecoration(
-                      labelText: "Digite sua tarefa"
-                    ),
-                    onChanged: (text){},
-                  ),
-                  actions: [
-                    FlatButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("Cancelar")
-                    ),
-                    FlatButton(
-                        onPressed: (){
-                          _salvarTarefa();
-                          Navigator.pop(context);
-                        },
-                        child: Text("Salvar")
-                    ),
-                  ],
-
-                );
-            }
-          );
-        },
+        onPressed: _criarItem,
       ),
     );
   }
